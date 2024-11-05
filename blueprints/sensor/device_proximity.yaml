@@ -1,0 +1,73 @@
+blueprint:
+  name: Device Proximity Sensor
+  description: Creates a sensor to detect when two devices are within a specified range of each other
+  domain: template
+  source_url: https://raw.githubusercontent.com/EvoGuyIX/homeassistant/main/blueprints/sensor/device_proximity.yaml
+  input:
+    device1:
+      name: First Device
+      description: Select the first device's location sensor
+      selector:
+        entity:
+          domain: sensor
+          filter:
+            - device_class: location
+    device2:
+      name: Second Device
+      description: Select the second device's location sensor
+      selector:
+        entity:
+          domain: sensor
+          filter:
+            - device_class: location
+    radius:
+      name: Proximity Radius
+      description: Distance in feet to consider devices "together" (default 1000)
+      default: 1000
+      selector:
+        number:
+          min: 100
+          max: 5000
+          unit_of_measurement: ft
+          mode: slider
+          step: 100
+
+sensor:
+  - name: "Device Proximity"
+    unique_id: device_proximity_sensor
+    unit_of_measurement: ft
+    state: >-
+      {% set lat1 = state_attr(device1, 'latitude') | float %}
+      {% set lon1 = state_attr(device1, 'longitude') | float %}
+      {% set lat2 = state_attr(device2, 'latitude') | float %}
+      {% set lon2 = state_attr(device2, 'longitude') | float %}
+      
+      {% set R = 20902231 %}  {# Earth radius in feet #}
+      
+      {% set dlat = (lat2 - lat1) | abs %}
+      {% set dlon = (lon2 - lon1) | abs %}
+      
+      {% set a = (sin(dlat/2))^2 + cos(lat1) * cos(lat2) * (sin(dlon/2))^2 %}
+      {% set distance = R * 2 * atan2(sqrt(a), sqrt(1-a)) %}
+      
+      {% if distance <= radius %}
+        together
+      {% else %}
+        apart
+      {% endif %}
+    attributes:
+      distance_ft: >-
+        {% set lat1 = state_attr(device1, 'latitude') | float %}
+        {% set lon1 = state_attr(device1, 'longitude') | float %}
+        {% set lat2 = state_attr(device2, 'latitude') | float %}
+        {% set lon2 = state_attr(device2, 'longitude') | float %}
+        
+        {% set R = 20902231 %}
+        
+        {% set dlat = (lat2 - lat1) | abs %}
+        {% set dlon = (lon2 - lon1) | abs %}
+        
+        {% set a = (sin(dlat/2))^2 + cos(lat1) * cos(lat2) * (sin(dlon/2))^2 %}
+        {% set distance = R * 2 * atan2(sqrt(a), sqrt(1-a)) %}
+        
+        {{ distance | round(1) }}
